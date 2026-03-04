@@ -23,35 +23,39 @@ function pct(intercepted: number, launched: number): number {
   return Math.round((intercepted / launched) * 100 * 10) / 10;
 }
 
+// Validate and parse a YYYY-MM-DD string — returns null if invalid
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function parseDate(s: string | null): Date | null {
+  if (!s || !DATE_RE.test(s)) return null;
+  const d = new Date(s + "T00:00:00Z");
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const from = searchParams.get("from");
-  const to = searchParams.get("to");
+
+  // Strict date validation — rejects anything that isn't YYYY-MM-DD
+  const dateFrom = parseDate(searchParams.get("from")) ?? new Date("1970-01-01T00:00:00Z");
+  const dateTo   = parseDate(searchParams.get("to"))   ?? new Date("2099-12-31T23:59:59Z");
 
   try {
-    // Date filters for the two queries
-    const viewDateFilter =
-      from || to
-        ? `WHERE date >= ${from ? `'${from}'::date` : "'1970-01-01'::date"} AND date <= ${to ? `'${to}'::date` : "CURRENT_DATE"}`
-        : "";
-
-    const eventDateFilter =
-      from || to
-        ? `AND date >= ${from ? `'${from}'::date` : "'1970-01-01'::date"} AND date <= ${to ? `'${to}'::date` : "CURRENT_DATE"}`
-        : "";
-
+    // All queries use parameterised $queryRaw (tagged template) — no raw string interpolation
     const [rows, subcategoryRows, lastUpdatedResult] = await Promise.all([
-      db.$queryRawUnsafe<DailyAggregateRow[]>(
-        `SELECT * FROM daily_aggregates ${viewDateFilter} ORDER BY date`
-      ),
-      db.$queryRawUnsafe<SubcategoryAggRow[]>(
-        `SELECT subcategory,
-           SUM(COALESCE("countLaunched", 0))     AS launched,
-           SUM(COALESCE("countIntercepted", 0)) AS intercepted
-         FROM events
-         WHERE category = 'MISSILE' AND "isCumulative" = false ${eventDateFilter}
-         GROUP BY subcategory`
-      ),
+      db.$queryRaw<DailyAggregateRow[]>`
+        SELECT * FROM daily_aggregates
+        WHERE date >= ${dateFrom}::date AND date <= ${dateTo}::date
+        ORDER BY date
+      `,
+      db.$queryRaw<SubcategoryAggRow[]>`
+        SELECT subcategory,
+          SUM(COALESCE("countLaunched", 0))    AS launched,
+          SUM(COALESCE("countIntercepted", 0)) AS intercepted
+        FROM events
+        WHERE category = 'MISSILE'
+          AND "isCumulative" = false
+          AND date >= ${dateFrom}::date AND date <= ${dateTo}::date
+        GROUP BY subcategory
+      `,
       db.rawTweet.findFirst({
         orderBy: { ingestedAt: "desc" },
         select: { ingestedAt: true },
@@ -79,26 +83,25 @@ export async function GET(req: NextRequest) {
       { missilesLaunched: 0, missilesIntercepted: 0, dronesLaunched: 0, dronesIntercepted: 0 }
     );
 
-    // Subcategory totals from raw events
+    // Subcategory totals
     const ballisticRow = subcategoryRows.find((r) => r.subcategory === "ballistic");
-    const cruiseRow = subcategoryRows.find((r) => r.subcategory === "cruise");
+    const cruiseRow    = subcategoryRows.find((r) => r.subcategory === "cruise");
 
     const kpi: KpiData = {
-      ballisticLaunched: Number(ballisticRow?.launched ?? 0),
+      ballisticLaunched:    Number(ballisticRow?.launched    ?? 0),
       ballisticIntercepted: Number(ballisticRow?.intercepted ?? 0),
-      cruiseLaunched: Number(cruiseRow?.launched ?? 0),
-      cruiseIntercepted: Number(cruiseRow?.intercepted ?? 0),
-      totalMissilesLaunched: totals.missilesLaunched,
+      cruiseLaunched:       Number(cruiseRow?.launched       ?? 0),
+      cruiseIntercepted:    Number(cruiseRow?.intercepted    ?? 0),
+      totalMissilesLaunched:    totals.missilesLaunched,
       totalMissilesIntercepted: totals.missilesIntercepted,
-      missileInterceptionRate: pct(totals.missilesIntercepted, totals.missilesLaunched),
-      totalDronesLaunched: totals.dronesLaunched,
+      missileInterceptionRate:  pct(totals.missilesIntercepted, totals.missilesLaunched),
+      totalDronesLaunched:    totals.dronesLaunched,
       totalDronesIntercepted: totals.dronesIntercepted,
-      droneInterceptionRate: pct(totals.dronesIntercepted, totals.dronesLaunched),
+      droneInterceptionRate:  pct(totals.dronesIntercepted, totals.dronesLaunched),
       lastUpdated: lastUpdatedResult?.ingestedAt.toISOString() ?? null,
     };
 
-    const response: AggregatesResponse = { kpi, daily };
-    return NextResponse.json(response);
+    return NextResponse.json({ kpi, daily } as AggregatesResponse);
   } catch (err) {
     console.error("[api/aggregates]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
