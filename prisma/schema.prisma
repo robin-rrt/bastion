@@ -1,0 +1,51 @@
+// UAE Defence Dashboard — Prisma Schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+}
+
+model RawTweet {
+  id          String   @id @default(cuid())
+  tweetUrl    String   @unique
+  tweetText   String
+  author      String
+  tweetDate   DateTime
+  ingestedAt  DateTime @default(now())
+  isRelevant  Boolean?
+  confidence  Float?
+  needsReview Boolean  @default(false)
+  events      Event[]
+
+  @@map("raw_tweets")
+}
+
+model Event {
+  id                 String        @id @default(cuid())
+  rawTweetId         String
+  rawTweet           RawTweet      @relation(fields: [rawTweetId], references: [id])
+  date               DateTime
+  category           EventCategory
+  subcategory        String?
+  countLaunched      Int?
+  countIntercepted   Int?
+  countImpact        Int?
+  location           String?
+  interceptionSystem String?
+  notes              String?
+  isCumulative       Boolean       @default(false) // true = "since start of conflict" total, excluded from daily aggregates
+  createdAt          DateTime      @default(now())
+
+  @@map("events")
+}
+
+enum EventCategory {
+  MISSILE
+  DRONE
+  OTHER
+}
