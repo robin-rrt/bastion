@@ -3,6 +3,8 @@ import { Dashboard } from "@/components/dashboard/Dashboard";
 import { LastUpdated } from "@/components/ui/LastUpdated";
 import { db } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 async function getLastUpdated(): Promise<string | null> {
   try {
     const row = await db.rawTweet.findFirst({
