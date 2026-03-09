@@ -15,7 +15,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:studio": "POSTGRES_URL=$DATABASE_URL prisma studio"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
