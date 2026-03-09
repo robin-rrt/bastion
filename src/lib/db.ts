@@ -1,6 +1,8 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { withAccelerate } from "@prisma/extension-accelerate";
 
+type ExtendedClient = ReturnType<typeof createClient>;
+
 function createClient() {
   return new PrismaClient({
     log:
@@ -10,12 +12,23 @@ function createClient() {
   }).$extends(withAccelerate());
 }
 
-type ExtendedClient = ReturnType<typeof createClient>;
-
 const globalForPrisma = globalThis as unknown as {
   prisma: ExtendedClient | undefined;
 };
 
-export const db = globalForPrisma.prisma ?? createClient();
+function getClient(): ExtendedClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createClient();
+  }
+  return globalForPrisma.prisma;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+// Lazy proxy — defers client creation until first DB access,
+// so env vars loaded by dotenv in CLI scripts are available in time.
+export const db = new Proxy({} as ExtendedClient, {
+  get(_target, prop) {
+    const client = getClient();
+    const val = (client as unknown as Record<string | symbol, unknown>)[prop];
+    return typeof val === "function" ? val.bind(client) : val;
+  },
+});
