@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
+
+type EventWithTweet = Prisma.EventGetPayload<{
+  include: { rawTweet: { select: { id: true; tweetUrl: true; author: true; tweetDate: true; needsReview: true; confidence: true } } };
+}>;
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -46,7 +51,7 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    const serialized = events.map((e) => ({
+    const serialized = (events as EventWithTweet[]).map((e) => ({
       id: e.id,
       date: e.date.toISOString().split("T")[0],
       category: e.category,

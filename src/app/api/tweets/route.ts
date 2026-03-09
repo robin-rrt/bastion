@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import type { TweetsResponse, TweetWithEvents } from "@/types";
+import type { Prisma } from "@/generated/prisma/client";
+
+type RawTweetWithEvents = Prisma.RawTweetGetPayload<{
+  include: { events: true };
+}>;
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -48,7 +53,7 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    const tweets: TweetWithEvents[] = rawTweets.map((t) => ({
+    const tweets: TweetWithEvents[] = (rawTweets as RawTweetWithEvents[]).map((t) => ({
       id: t.id,
       tweetUrl: t.tweetUrl,
       tweetText: t.tweetText,

@@ -14,6 +14,11 @@ dotenv.config({ path: ".env" });
 import * as readline from "readline";
 import { db } from "@/lib/db";
 import { classifyAndExtract } from "@/lib/claude";
+import type { Prisma } from "@/generated/prisma/client";
+
+type TweetWithEvents = Prisma.RawTweetGetPayload<{
+  include: { events: true };
+}>;
 
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
@@ -125,7 +130,7 @@ async function main() {
     where,
     include: { events: { orderBy: { date: "asc" } } },
     orderBy: { tweetDate: "asc" },
-  });
+  }) as TweetWithEvents[];
 
   if (tweets.length === 0) {
     console.log("No tweets to audit.");
