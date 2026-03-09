@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate --accelerate && next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate --accelerate",
     "ingest": "tsx scripts/ingest.ts",
     "reclassify": "tsx scripts/reclassify.ts",
     "review": "tsx scripts/audit.ts",
