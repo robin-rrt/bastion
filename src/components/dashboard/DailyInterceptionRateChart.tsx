@@ -79,7 +79,7 @@ export function DailyInterceptionRateChart({ data }: { data: DailyRow[] }) {
           }}
           labelStyle={{ color: "#fafafa" }}
           itemStyle={{ color: "#a1a1aa" }}
-          formatter={(value: number) => [`${value}%`]}
+          formatter={(value: number | undefined) => [value != null ? `${value}%` : "N/A"]}
         />
         <Legend
           wrapperStyle={{ fontFamily: "monospace", fontSize: 11, color: "#71717a" }}
