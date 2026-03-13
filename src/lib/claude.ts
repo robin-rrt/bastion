@@ -32,6 +32,7 @@ WHAT TO EXTRACT — TODAY'S INCIDENT ONLY:
 
 COUNTING RULES — READ CAREFULLY:
 - countLaunched = total projectiles fired at UAE in this engagement (intercepted + sea-falls + territory hits).
+- "engaged" / "تم التعامل" = the UAE military engaged with (i.e., was attacked by) the threat. Treat as an attack event and set countLaunched to the number engaged, even if the interception count is not explicitly stated. Set countIntercepted = null if not explicitly stated.
 - countIntercepted = destroyed/neutralised in the air before reaching any surface ("intercepted", "destroyed", "shot down").
 - countImpact = landed inside UAE territory and caused or could cause damage ("fell within the country", "struck [location]", "landed in territory", "hit [base/area]").
 - "fell into the sea" / "fell into sea waters" = NOT countImpact. These missed UAE territory entirely. Do not count them as impacts. They are implicitly: countLaunched − countIntercepted − countImpact.

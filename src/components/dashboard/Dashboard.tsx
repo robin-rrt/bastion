@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { KpiCards } from "./KpiCards";
 import { DailyBarChart } from "./DailyBarChart";
 import { CumulativeLineChart } from "./CumulativeLineChart";
+import { DailyIncomingChart } from "./DailyIncomingChart";
+import { DailyInterceptionRateChart } from "./DailyInterceptionRateChart";
 import { ThreatBreakdown } from "./ThreatBreakdown";
 import { SourcePanel } from "./SourcePanel";
 import { Filters } from "./Filters";
@@ -119,6 +121,18 @@ export function Dashboard() {
         <div className="bg-zinc-950 p-4">
           <SectionLabel>Threat Breakdown</SectionLabel>
           <ThreatBreakdown kpi={kpi} />
+        </div>
+      </section>
+
+      {/* Daily incoming + interception rate */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-zinc-800">
+        <div className="bg-zinc-950 p-4">
+          <SectionLabel>Daily Incoming</SectionLabel>
+          <DailyIncomingChart data={daily} />
+        </div>
+        <div className="bg-zinc-950 p-4">
+          <SectionLabel>Daily Interception Rate</SectionLabel>
+          <DailyInterceptionRateChart data={daily} />
         </div>
       </section>
 
