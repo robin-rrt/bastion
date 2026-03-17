@@ -17,6 +17,7 @@ export interface ExtractedEvent {
   location?: string | null;
   interceptionSystem?: string | null;
   notes?: string | null;
+  isCumulative?: boolean; // true = authoritative running total since conflict start
 }
 
 export interface ClaudeExtractionResult {
@@ -54,9 +55,18 @@ export interface DailyRow {
   otherIntercepted: number;
 }
 
+// Authoritative running totals extracted from official statements
+export interface CumulativeCheckpoint {
+  date: string; // "YYYY-MM-DD"
+  missiles: number;
+  drones: number;
+  other: number;
+}
+
 export interface AggregatesResponse {
   kpi: KpiData;
   daily: DailyRow[];
+  checkpoints: CumulativeCheckpoint[];
 }
 
 export interface TweetWithEvents {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import type { AggregatesResponse, DailyRow, KpiData } from "@/types";
+import type { AggregatesResponse, CumulativeCheckpoint, DailyRow, KpiData } from "@/types";
 
 interface DailyAggregateRow {
   date: Date;
@@ -16,6 +16,12 @@ interface SubcategoryAggRow {
   subcategory: string | null;
   launched: bigint;
   intercepted: bigint;
+}
+
+interface CheckpointRow {
+  date: Date;
+  category: string;
+  total: bigint;
 }
 
 function pct(intercepted: number, launched: number): number {
@@ -40,7 +46,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // All queries use parameterised $queryRaw (tagged template) — no raw string interpolation
-    const [rows, subcategoryRows, lastUpdatedResult] = await Promise.all([
+    const [rows, subcategoryRows, checkpointRows, lastUpdatedResult] = await Promise.all([
       db.$queryRaw<DailyAggregateRow[]>`
         SELECT * FROM daily_aggregates
         WHERE date >= ${dateFrom}::date AND date <= ${dateTo}::date
@@ -55,6 +61,16 @@ export async function GET(req: NextRequest) {
           AND "isCumulative" = false
           AND date >= ${dateFrom}::date AND date <= ${dateTo}::date
         GROUP BY subcategory
+      `,
+      db.$queryRaw<CheckpointRow[]>`
+        SELECT DISTINCT ON (DATE_TRUNC('day', date)::date, category)
+          DATE_TRUNC('day', date)::date AS date,
+          category,
+          COALESCE("countLaunched", 0) AS total
+        FROM events
+        WHERE "isCumulative" = true
+          AND date >= ${dateFrom}::date AND date <= ${dateTo}::date
+        ORDER BY DATE_TRUNC('day', date)::date, category, date DESC
       `,
       db.rawTweet.findFirst({
         orderBy: { ingestedAt: "desc" },
@@ -101,7 +117,22 @@ export async function GET(req: NextRequest) {
       lastUpdated: lastUpdatedResult?.ingestedAt.toISOString() ?? null,
     };
 
-    return NextResponse.json({ kpi, daily } as AggregatesResponse);
+    // Build checkpoints: merge per-category rows into per-date objects
+    const checkpointMap = new Map<string, CumulativeCheckpoint>();
+    for (const r of checkpointRows) {
+      const date = r.date.toISOString().split("T")[0];
+      if (!checkpointMap.has(date)) {
+        checkpointMap.set(date, { date, missiles: 0, drones: 0, other: 0 });
+      }
+      const cp = checkpointMap.get(date)!;
+      if (r.category === "MISSILE") cp.missiles = Number(r.total);
+      else if (r.category === "DRONE") cp.drones = Number(r.total);
+      else if (r.category === "OTHER") cp.other = Number(r.total);
+    }
+    const checkpoints: CumulativeCheckpoint[] = Array.from(checkpointMap.values())
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return NextResponse.json({ kpi, daily, checkpoints } as AggregatesResponse);
   } catch (err) {
     console.error("[api/aggregates]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

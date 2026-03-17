@@ -60,6 +60,7 @@ async function reclassify(id: string) {
         location: e.location ?? null,
         interceptionSystem: e.interceptionSystem ?? null,
         notes: e.notes ?? null,
+        isCumulative: e.isCumulative ?? false,
       })),
     });
   }

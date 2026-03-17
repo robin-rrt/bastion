@@ -66,6 +66,7 @@ export async function ingestTweet(
         location: e.location ?? null,
         interceptionSystem: e.interceptionSystem ?? null,
         notes: e.notes ?? null,
+        isCumulative: e.isCumulative ?? false,
       })),
     });
   }

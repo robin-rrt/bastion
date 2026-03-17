@@ -145,7 +145,7 @@ export function Dashboard() {
       {/* Cumulative chart */}
       <section className="border border-zinc-800 bg-zinc-950 p-4">
         <SectionLabel>Cumulative Totals</SectionLabel>
-        <CumulativeLineChart data={daily} />
+        <CumulativeLineChart data={daily} checkpoints={aggregates!.checkpoints} />
       </section>
 
       {/* Source tweets */}

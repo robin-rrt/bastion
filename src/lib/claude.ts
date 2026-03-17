@@ -25,10 +25,19 @@ EXTRACTION RULES:
 - confidence: set to 0.95 unless numbers are genuinely ambiguous or contradictory in the text itself, in which case use 0.75 and set needsReview=true
 - needsReview: only true if the text contains conflicting numbers or is genuinely unclear — NOT for editorial judgment
 
-WHAT TO EXTRACT — TODAY'S INCIDENT ONLY:
-- Extract ONLY figures describing the SPECIFIC INCIDENT happening NOW (today, this morning, this engagement).
-- COMPLETELY IGNORE any cumulative totals. These are signalled by phrases like: "since the start of the attack", "since the beginning", "since [date]", "so far", "in total since", "منذ بدء". Skip every number that follows such a phrase.
-- If the statement contains ONLY cumulative totals and NO today-specific figures, return events: [].
+WHAT TO EXTRACT — TWO TYPES OF EVENTS:
+
+TYPE 1 — TODAY'S INCIDENT (isCumulative: false):
+- Extract figures describing the SPECIFIC INCIDENT happening NOW (today, this morning, this engagement).
+- If no today-specific figures exist, omit TYPE 1 events entirely.
+
+TYPE 2 — CUMULATIVE CHECKPOINT (isCumulative: true):
+- Extract the running totals signalled by: "since the start of the attack", "since the beginning", "since [date]", "so far", "in total since", "منذ بدء".
+- These represent the authoritative total for the entire conflict up to and including this tweet's date.
+- Use the tweet date as the event date.
+- Set countLaunched = the cumulative total stated. Set countIntercepted = same value (engagement = interception per our methodology).
+- Return one TYPE 2 event per category mentioned in the cumulative section.
+- If no cumulative totals are mentioned, omit TYPE 2 events.
 
 COUNTING RULES — READ CAREFULLY:
 - countLaunched = total projectiles fired at UAE in this engagement (intercepted + sea-falls + territory hits).
@@ -59,7 +68,20 @@ Respond ONLY with this exact JSON (no markdown, no prose):
       "countImpact": number | null,
       "location": string | null,
       "interceptionSystem": string | null,
-      "notes": string | null
+      "notes": string | null,
+      "isCumulative": false
+    },
+    {
+      "date": "YYYY-MM-DD",
+      "category": "MISSILE" | "DRONE" | "OTHER",
+      "subcategory": "ballistic" | "cruise" | "UAV" | "unknown" | null,
+      "countLaunched": number,
+      "countIntercepted": number,
+      "countImpact": null,
+      "location": null,
+      "interceptionSystem": null,
+      "notes": null,
+      "isCumulative": true
     }
   ]
 }`;

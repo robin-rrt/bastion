@@ -10,16 +10,27 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import type { DailyRow } from "@/types";
+import type { CumulativeCheckpoint, DailyRow } from "@/types";
 
 interface CumulativeRow {
   date: string;
   missiles: number;
   drones: number;
   intercepted: number;
+  isCheckpoint?: boolean;
 }
 
-function buildCumulative(daily: DailyRow[]): CumulativeRow[] {
+function buildFromCheckpoints(checkpoints: CumulativeCheckpoint[]): CumulativeRow[] {
+  return checkpoints.map((cp) => ({
+    date: cp.date,
+    missiles: cp.missiles,
+    drones: cp.drones,
+    intercepted: cp.missiles + cp.drones + cp.other,
+    isCheckpoint: true,
+  }));
+}
+
+function buildFromDaily(daily: DailyRow[]): CumulativeRow[] {
   let missiles = 0;
   let drones = 0;
   let intercepted = 0;
@@ -31,8 +42,14 @@ function buildCumulative(daily: DailyRow[]): CumulativeRow[] {
   });
 }
 
-export function CumulativeLineChart({ data }: { data: DailyRow[] }) {
-  if (data.length === 0) {
+export function CumulativeLineChart({
+  data,
+  checkpoints = [],
+}: {
+  data: DailyRow[];
+  checkpoints?: CumulativeCheckpoint[];
+}) {
+  if (data.length === 0 && checkpoints.length === 0) {
     return (
       <div className="h-64 flex items-center justify-center text-zinc-600 font-mono text-sm">
         NO DATA
@@ -40,9 +57,18 @@ export function CumulativeLineChart({ data }: { data: DailyRow[] }) {
     );
   }
 
-  const cumulative = buildCumulative(data);
+  const usingCheckpoints = checkpoints.length > 0;
+  const cumulative = usingCheckpoints
+    ? buildFromCheckpoints(checkpoints)
+    : buildFromDaily(data);
 
   return (
+    <div>
+      {usingCheckpoints && (
+        <p className="text-xs font-mono text-zinc-600 mb-2">
+          AUTHORITATIVE — sourced from official cumulative statements
+        </p>
+      )}
     <ResponsiveContainer width="100%" height={280}>
       <LineChart
         data={cumulative}
@@ -105,5 +131,6 @@ export function CumulativeLineChart({ data }: { data: DailyRow[] }) {
         />
       </LineChart>
     </ResponsiveContainer>
+    </div>
   );
 }
