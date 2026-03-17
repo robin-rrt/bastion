@@ -112,6 +112,12 @@ export function Dashboard() {
         <KpiCards kpi={kpi} />
       </section>
 
+      {/* Data methodology note */}
+      <p className="text-xs font-mono text-zinc-600 border-l-2 border-zinc-800 pl-3">
+        NOTE: From 11 March 2026, UAE MoD reports engagements only — interception outcomes are no longer
+        explicitly stated. Figures from this date assume all engagements were successful interceptions.
+      </p>
+
       {/* Charts row */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-px bg-zinc-800">
         <div className="col-span-2 bg-zinc-950 p-4">
