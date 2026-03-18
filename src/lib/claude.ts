@@ -27,31 +27,37 @@ EXTRACTION RULES:
 
 WHAT TO EXTRACT — TWO TYPES OF EVENTS:
 
-TYPE 1 — TODAY'S INCIDENT (isCumulative: false):
-- Extract figures describing the SPECIFIC INCIDENT happening NOW (today, this morning, this engagement).
-- If no today-specific figures exist, omit TYPE 1 events entirely.
+════════════════════════════════
+TYPE 1 — TODAY'S INCIDENT ONLY  (isCumulative: false)
+════════════════════════════════
+Extract figures for the SPECIFIC ATTACK happening in this statement (today / this morning / this engagement).
+If no today-specific attack figures exist, omit all TYPE 1 events.
 
-TYPE 2 — CUMULATIVE CHECKPOINT (isCumulative: true):
-- Extract the running totals signalled by: "since the start of the attack", "since the beginning", "since [date]", "so far", "in total since", "منذ بدء".
-- These represent the authoritative total for the entire conflict up to and including this tweet's date.
-- Use the tweet date as the event date.
-- Set countLaunched = the cumulative total stated. Set countIntercepted = same value (engagement = interception per our methodology).
-- Return one TYPE 2 event per category mentioned in the cumulative section.
-- If no cumulative totals are mentioned, omit TYPE 2 events.
+COUNTING RULES for TYPE 1:
+- countLaunched = total projectiles fired at UAE in this engagement.
+- "engaged" / "تم التعامل": UAE air defence engaged the threat — treat as BOTH launched AND intercepted. Set countLaunched = N AND countIntercepted = N (same value).
+- countIntercepted = destroyed/neutralised before reaching any surface ("intercepted", "destroyed", "shot down").
+- countImpact = reached and struck UAE territory ("fell within the country", "struck [location]", "hit [area]").
+- "fell into the sea" = NOT countImpact. Implicitly: countLaunched − countIntercepted − countImpact.
+- Use null (not 0) for any field not explicitly stated in today's figures.
+- If ballistic and cruise missiles are distinguished by count, return a SEPARATE TYPE 1 event per subcategory.
+- If both missiles AND drones are in the same engagement, return a SEPARATE TYPE 1 event per category.
 
-COUNTING RULES — READ CAREFULLY:
-- countLaunched = total projectiles fired at UAE in this engagement (intercepted + sea-falls + territory hits).
-- "engaged" / "تم التعامل" = treat as both launched AND successfully intercepted. Set countLaunched = N AND countIntercepted = N (same value). UAE air defence "engaging" a threat implies successful neutralisation.
-- countIntercepted = destroyed/neutralised in the air before reaching any surface ("intercepted", "destroyed", "shot down").
-- countImpact = landed inside UAE territory and caused or could cause damage ("fell within the country", "struck [location]", "landed in territory", "hit [base/area]").
-- "fell into the sea" / "fell into sea waters" = NOT countImpact. These missed UAE territory entirely. Do not count them as impacts. They are implicitly: countLaunched − countIntercepted − countImpact.
+════════════════════════════════
+TYPE 2 — CUMULATIVE CHECKPOINT  (isCumulative: true)
+════════════════════════════════
+Extract running totals for the ENTIRE CONFLICT signalled by: "since the start", "since the beginning", "since [date]", "so far", "in total since", "منذ بدء", "منذ بداية".
+These are the authoritative total counts from conflict start up to and including this statement date.
 
-CATEGORY RULES:
-- If today's engagement mentions both missiles AND drones, return a separate event object for each.
-- If today's engagement distinguishes ballistic and cruise missiles by count, return a separate event object per subcategory.
-- Use null (not 0) for any field not explicitly mentioned in today's figures.
-- Arabic numerals (٠١٢٣٤٥٦٧٨٩): convert to integers.
-- For correction/update statements: set notes to explain what was revised.
+RULES for TYPE 2:
+- Use the STATEMENT DATE as the event date for all TYPE 2 events.
+- Set countLaunched = the total number stated. Set countIntercepted = same value.
+- countImpact = null. location = null. interceptionSystem = null. notes = null.
+- Return a SEPARATE TYPE 2 event for each distinct category+subcategory combination mentioned (e.g. "314 ballistic missiles" → one MISSILE/ballistic event; "15 cruise missiles" → one MISSILE/cruise event; "1,672 UAVs" → one DRONE/UAV event).
+- If no cumulative totals are stated, omit all TYPE 2 events.
+
+Arabic numerals (٠١٢٣٤٥٦٧٨٩): always convert to integers.
+For correction/update statements: set notes on the relevant TYPE 1 event(s) to explain what was revised.
 
 Respond ONLY with this exact JSON (no markdown, no prose):
 {
@@ -96,7 +102,7 @@ export async function classifyAndExtract(
   try {
     const message = await getClient().messages.create({
       model: "claude-opus-4-6",
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: SYSTEM_PROMPT,
       messages: [
         {

@@ -63,14 +63,15 @@ export async function GET(req: NextRequest) {
         GROUP BY subcategory
       `,
       db.$queryRaw<CheckpointRow[]>`
-        SELECT DISTINCT ON (DATE_TRUNC('day', date)::date, category)
+        SELECT
           DATE_TRUNC('day', date)::date AS date,
           category,
-          COALESCE("countLaunched", 0) AS total
+          SUM(COALESCE("countLaunched", 0)) AS total
         FROM events
         WHERE "isCumulative" = true
           AND date >= ${dateFrom}::date AND date <= ${dateTo}::date
-        ORDER BY DATE_TRUNC('day', date)::date, category, date DESC
+        GROUP BY DATE_TRUNC('day', date)::date, category
+        ORDER BY DATE_TRUNC('day', date)::date
       `,
       db.rawTweet.findFirst({
         orderBy: { ingestedAt: "desc" },
